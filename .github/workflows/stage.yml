@@ -1,0 +1,46 @@
+# This is a basic workflow to help you get started with Actions
+
+name: CI-Sage
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the main branch
+  push:
+    branches: [ stage ]
+  pull_request:
+    branches: [ stage ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+        with:
+          ref: stage
+          submodules: true  # Fetch Hugo themes
+          fetch-depth: 0    # Fetch all history for .GitInfo and .Lastmod      
+
+         # Step 2 - Sets up the latest version of Hugo
+      - name: Setup Hugo
+        uses: peaceiris/actions-hugo@v2
+        with:
+            hugo-version: 'latest'
+      # Also specifies the theme we want to use
+      - name: Build
+        run: hugo --config="config-stage.toml" -b "https://docs-qa.fileformat.com/" --cleanDestinationDir --minify
+
+
+      - name: Deploy total to S3
+        run: hugo deploy --config "./config-stage.toml"  --target "Home" --maxDeletes=-1 --verbose
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
